@@ -7,7 +7,7 @@ from datetime import datetime
 # CONFIG
 # ==============================
 st.set_page_config(page_title="Smart Roommate Tracker", layout="wide")
-=======
+]
 # PAGE CONFIG
 st.set_page_config(page_title="Roommate App", layout="wide")
 
@@ -99,7 +99,6 @@ filtered_df = df[
 ]
 
 # ==============================
-
 # TABS (CLEAN UI)
 # ==============================
 tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "➕ Add Task", "🧠 Insights"])
