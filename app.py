@@ -1,0 +1,219 @@
+import streamlit as st
+import pandas as pd
+from datetime import datetime
+
+# ==============================
+# CONFIG
+# ==============================
+st.set_page_config(page_title="Smart Roommate Tracker", layout="wide")
+
+# ==============================
+# LOAD DATA
+# ==============================
+@st.cache_data
+def load_data():
+    df = pd.read_csv("data.csv")
+    df["Date"] = pd.to_datetime(df["Date"])
+    return df
+
+df = load_data()
+
+# ==============================
+# USER (LOGIN SIMULATION)
+# ==============================
+st.sidebar.header("👤 User")
+
+user = st.sidebar.selectbox(
+    "Who are you?",
+    options=df["Roommate"].unique()
+)
+
+st.title(f"🏠 Smart Roommate Tracker — Welcome {user}")
+
+# ==============================
+# FILTERS
+# ==============================
+st.sidebar.header("🔍 Filters")
+
+roommates = st.sidebar.multiselect(
+    "Roommate",
+    options=df["Roommate"].unique(),
+    default=df["Roommate"].unique()
+)
+
+tasks = st.sidebar.multiselect(
+    "Task",
+    options=df["Task"].unique(),
+    default=df["Task"].unique()
+)
+
+date_range = st.sidebar.date_input(
+    "Date Range",
+    [df["Date"].min(), df["Date"].max()]
+)
+
+filtered_df = df[
+    (df["Roommate"].isin(roommates)) &
+    (df["Task"].isin(tasks)) &
+    (df["Date"] >= pd.to_datetime(date_range[0])) &
+    (df["Date"] <= pd.to_datetime(date_range[1]))
+]
+
+# ==============================
+# TABS (CLEAN UI)
+# ==============================
+tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "➕ Add Task", "🧠 Insights"])
+
+# ==============================
+# TAB 1: DASHBOARD
+# ==============================
+with tab1:
+
+    st.subheader("📊 Key Metrics")
+
+    col1, col2, col3 = st.columns(3)
+
+    total_tasks = len(filtered_df)
+    completion_rate = (filtered_df["Completed"] == "Yes").mean() * 100
+    avg_time = filtered_df["Time_Taken"].mean()
+
+    col1.metric("Total Tasks", total_tasks)
+    col2.metric("Completion Rate (%)", round(completion_rate, 2))
+    col3.metric("Avg Time (mins)", round(avg_time, 2))
+
+    # ==========================
+    # VISUALS
+    # ==========================
+    st.subheader("📈 Performance Overview")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write("### Workload Distribution")
+        st.bar_chart(filtered_df.groupby("Roommate")["Time_Taken"].sum())
+
+    with col2:
+        st.write("### Completion Rate")
+        comp = filtered_df.groupby("Roommate")["Completed"].apply(
+            lambda x: (x == "Yes").mean()
+        )
+        st.bar_chart(comp)
+
+    # ==========================
+    # FAIRNESS VISUAL (WOW VISUAL)
+    # ==========================
+    st.subheader("⚖️ Workload Balance")
+
+    effort = filtered_df.groupby("Roommate")["Time_Taken"].sum()
+    st.bar_chart(effort)
+
+    fairness = effort.std()
+
+    st.metric("Workload Imbalance Score", round(fairness, 2))
+
+    if fairness < 10:
+        st.success("✅ Tasks are evenly distributed")
+    else:
+        st.warning("⚠️ Some roommates may be overloaded")
+
+    # ==========================
+    # WEEKLY TREND
+    # ==========================
+    if "Week Number" in filtered_df.columns:
+        st.subheader("📅 Weekly Trend")
+        weekly = filtered_df.groupby("Week Number")["Time_Taken"].sum()
+        st.line_chart(weekly)
+
+# ==============================
+# TAB 2: ADD TASK
+# ==============================
+with tab2:
+
+    st.subheader("➕ Log a Task")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        new_task = st.selectbox("Task", df["Task"].unique())
+
+    with col2:
+        new_time = st.number_input("Time (mins)", min_value=1)
+
+    with col3:
+        new_completed = st.selectbox("Completed?", ["Yes", "No"])
+
+    if st.button("Add Task"):
+        new_row = pd.DataFrame([{
+            "Date": datetime.today(),
+            "Roommate": user,
+            "Task": new_task,
+            "Time_Taken": new_time,
+            "Completed": new_completed,
+            "Effort_Score": new_time * (1 if new_completed == "Yes" else 0.5)
+        }])
+
+        df = pd.concat([df, new_row], ignore_index=True)
+        df.to_csv("data.csv", index=False)
+
+        st.success("✅ Task logged successfully!")
+
+# ==============================
+# TAB 3: INSIGHTS
+# ==============================
+with tab3:
+
+    st.subheader("🧠 Smart Insights")
+
+    if not filtered_df.empty:
+
+        effort_sum = filtered_df.groupby("Roommate")["Time_Taken"].sum()
+        completion_rate_rm = filtered_df.groupby("Roommate")["Completed"].apply(
+            lambda x: (x == "Yes").mean()
+        )
+
+        top_worker = effort_sum.idxmax()
+        least_worker = effort_sum.idxmin()
+        best_completion = completion_rate_rm.idxmax()
+        worst_completion = completion_rate_rm.idxmin()
+
+        st.write(f"🏆 **{top_worker}** is contributing the most effort.")
+        st.write(f"⚠️ **{least_worker}** is contributing the least.")
+        st.write(f"✅ **{best_completion}** has the highest completion reliability.")
+        st.write(f"❌ **{worst_completion}** needs improvement in consistency.")
+
+        # ==========================
+        # WOW FEATURE 🤯
+        # ==========================
+        st.subheader("🤖 Smart Recommendation Engine")
+
+        if user == least_worker:
+            st.warning("💡 You can take up more tasks to balance workload.")
+        elif user == top_worker:
+            st.info("🔥 You're contributing the most — consider delegating tasks.")
+        elif user == worst_completion:
+            st.error("📉 Focus on completing assigned tasks more consistently.")
+        else:
+            st.success("✨ You're doing great! Keep it up.")
+
+        # ==========================
+        # LEADERBOARD
+        # ==========================
+        st.subheader("🥇 Leaderboard")
+
+        leaderboard = effort_sum.sort_values(ascending=False).reset_index()
+        leaderboard.columns = ["Roommate", "Total Effort"]
+
+        st.dataframe(leaderboard)
+
+    # ==========================
+    # DOWNLOAD
+    # ==========================
+    csv = filtered_df.to_csv(index=False)
+
+    st.download_button(
+        label="📥 Download Data",
+        data=csv,
+        file_name="roommate_data.csv",
+        mime="text/csv"
+    )
+git init
