@@ -30,7 +30,7 @@ user = st.sidebar.selectbox(
     options=df["Roommate"].unique()
 )
 
-st.title(f"🏠 Smart Roommate Tracker — Welcome {user}")
+st.title(f" Welcome {user}")
 
 # ==============================
 # FILTERS
@@ -63,9 +63,9 @@ filtered_df = df[
 ]
 
 # ==============================
-# TABS (CLEAN UI)
+# TABS (UPDATED WITH TABLEAU)
 # ==============================
-tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "➕ Add Task", "🧠 Insights"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Dashboard", "➕ Add Task", "🧠 Insights", "📈 Historical Analysis"])
 
 # ==============================
 # TAB 1: DASHBOARD
@@ -84,9 +84,6 @@ with tab1:
     col2.metric("Completion Rate (%)", round(completion_rate, 2))
     col3.metric("Avg Time (mins)", round(avg_time, 2))
 
-    # ==========================
-    # VISUALS
-    # ==========================
     st.subheader("📈 Performance Overview")
 
     col1, col2 = st.columns(2)
@@ -102,9 +99,6 @@ with tab1:
         )
         st.bar_chart(comp)
 
-    # ==========================
-    # FAIRNESS VISUAL
-    # ==========================
     st.subheader("⚖️ Workload Balance")
 
     effort = filtered_df.groupby("Roommate")["Time_Taken"].sum()
@@ -119,9 +113,6 @@ with tab1:
     else:
         st.warning("⚠️ Some roommates may be overloaded")
 
-    # ==========================
-    # WEEKLY TREND
-    # ==========================
     if "Week Number" in filtered_df.columns:
         st.subheader("📅 Weekly Trend")
         weekly = filtered_df.groupby("Week Number")["Time_Taken"].sum()
@@ -184,9 +175,6 @@ with tab3:
         st.write(f"✅ **{best_completion}** has the highest completion reliability.")
         st.write(f"❌ **{worst_completion}** needs improvement in consistency.")
 
-        # ==========================
-        # SMART RECOMMENDATION (WOW FEATURE)
-        # ==========================
         st.subheader("🤖 Smart Recommendation Engine")
 
         if user == least_worker:
@@ -198,9 +186,6 @@ with tab3:
         else:
             st.success("✨ You're doing great! Keep it up.")
 
-        # ==========================
-        # LEADERBOARD
-        # ==========================
         st.subheader("🥇 Leaderboard")
 
         leaderboard = effort_sum.sort_values(ascending=False).reset_index()
@@ -208,9 +193,6 @@ with tab3:
 
         st.dataframe(leaderboard)
 
-    # ==========================
-    # DOWNLOAD
-    # ==========================
     csv = filtered_df.to_csv(index=False)
 
     st.download_button(
@@ -219,3 +201,17 @@ with tab3:
         file_name="roommate_data.csv",
         mime="text/csv"
     )
+
+# ==============================
+# TAB 4: TABLEAU 
+# ==============================
+with tab4:
+
+    st.subheader("📈 Historical Analysis (March 1–21)")
+
+    st.markdown("""
+    This dashboard shows initial exploratory analysis based on historical data.
+    Insights from this analysis were used to build the live tracking system.
+    """)
+
+    st.markdown("[👉 View Full Tableau Dashboard](https://public.tableau.com/app/profile/mathivadhana.parthasarathy/viz/SmartRoomateTrackerWorkbook/Dashboard1)")
